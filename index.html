@@ -248,14 +248,14 @@ const DVT={loi:'cái',v:'thanh',thung:'thùng'};
 const VC_OPT=['Không — khách tự nhận','Đường bộ','Đường biển','Đường sắt'];
 const VC_CACH=['Tra biểu phí đường bộ','Tùy chỉnh — nhập phí/chuyến'];
 const BXX=['Không','Có — theo mức chuẩn','Có — tùy chỉnh phí/chuyến'];
-const D1_OK='✓ Duyệt — chuyển cấp 2', D1_BACK='↩ Trả người tính giá rà soát lại';
-const D2_OK='✓ Duyệt — trả giá cho Sale', D2_BACK='↩ Trả người tính giá rà soát lại';
+const D1_OK='✓ Duyệt — chuyển cấp 2', D1_SALE='↩ Trả Sale điều chỉnh giá xin duyệt', D1_BACK='↩ Trả người tính giá rà soát lại';
+const D2_OK='✓ Duyệt — trả giá cho Sale', D2_SALE='↩ Trả Sale điều chỉnh giá xin duyệt', D2_BACK='↩ Trả người tính giá rà soát lại';
 const MA_YC='YCTG-2609-001', MA_DT='DT-2609-001';
 
 /* =====================================================================
    STATE
    ===================================================================== */
-const STORE='tph_bom_v14';
+const STORE='tph_bom_v15';
 function mkDefault(){
   const nvl={};NVL_DEF.forEach(r=>nvl[r[0]]={gan:'',bq:'',tu:String(r[4])});
   const nhom={};['loi','v','thung'].forEach(k=>nhom[k]={sx:'10',ql:'25',m:'20'});
@@ -264,9 +264,9 @@ function mkDefault(){
     req:{khach:'Công ty TNHH Bao Bì Miền Đông',nguoiyc:'Ngô Thị Hạnh — Sale',ngay:'2026-09-20',diachi:'KCN Sóng Thần 2, Dĩ An, Bình Dương',
       vc:VC_OPT[1],vcCach:VC_CACH[0],khoangcach:VC_KC[0],loaixe:VC_XE[2],vcTuy:'',vcGhichu:'',sochuyen:'1',bxx:BXX[1],bxxTuy:'',ngayTC:'30',hoahong:'3',ghichu:'',
       lines:[
-        {uid:'L1',type:'loi',d:'300',h:'810',t:'3',sl:'300',xin:'38000'},
-        {uid:'L2',type:'v',c1:'50',c2:'50',t:'4',l:'1200',sl:'500',xin:'7000'},
-        {uid:'L3',type:'thung',od:'550',oh:'600',id:'330',ih:'540',sl:'100',xin:'340000',pk:[
+        {uid:'L1',type:'loi',d:'300',h:'810',t:'3',sl:'300'},
+        {uid:'L2',type:'v',c1:'50',c2:'50',t:'4',l:'1200',sl:'500'},
+        {uid:'L3',type:'thung',od:'550',oh:'600',id:'330',ih:'540',sl:'100',pk:[
           {uid:'P1',src:'dm',key:'thuocdo',ten:'',quycach:'',sl:'1'},
           {uid:'P2',src:'moi',key:'',ten:'Lò xo',quycach:'Lò xo gắn trong thùng, theo mẫu khách',sl:'1'}]}
       ]},
@@ -275,7 +275,8 @@ function mkDefault(){
     dt:{pa:'tu',ghichu:''},
     d1:{nguoi:'Đặng Thị Mai — Sales admin',ngay:'2026-09-22',kq:'',ykien:''},
     d2:{nguoi:'',ngay:'2026-09-23',kq:'',ykien:'',gia:{},fee:''},
-    q2:{nguoi:'Bộ phận tìm nguồn cung',han:'2026-09-25',items:{P2:{ncc:'Cơ khí Lò xo Bình Dương',phuongan:'Mua ngoài',gia:'8000',hieuluc:'30 ngày kể từ 20/09/2026',tailieu:'',tt:'Chờ giá'}}},
+    xd:{gia:{L1:'38000',L2:'7000',L3:'340000'},lydo:'',back:false,backNote:''},
+    q2:{created:false,nguoi:'Bộ phận tìm nguồn cung',han:'2026-09-25',items:{P2:{ncc:'Cơ khí Lò xo Bình Dương',phuongan:'Mua ngoài',gia:'8000',hieuluc:'30 ngày kể từ 20/09/2026',tailieu:'',tt:'Chờ giá'}}},
     bt:{nvl:nvl,pk:{thuocdo:{ten:'Thước đo',dvt:'cái',gia:'5000',from:''}},nhom:nhom,r:'15',bxlen:'400000',bxxuong:'300000',
       chuan:{od:'506.5',oh:'510',id:'300',ih:'450'}},
     snap:null,approved:null
@@ -417,19 +418,20 @@ function compute(pa){
   const sp=lines.every(x=>x.ok)?lines.reduce((t,x)=>t+x.P*x.sl,0):null;
   return{lines:lines,s:s,c:c,a:a,ok:ok,sp:sp,fee:s.tong,total:sp==null?null:sp+s.tong,pa:pa};
 }
-function xinOf(x){return blank(x.l.xin)?x.P:n(x.l.xin);}
+function xinOf(x){return x.P;}
+function xdVal(x){const v=S.xd.gia[x.uid];return blank(v)?x.P:n(v);}
 function lnOf(G,price,c,a){const base=price*(1-c)*(1-a);return base?1-G/base:null;}
 function lnTong(items,c,a,priceFn){let g=0,b=0;items.forEach(x=>{const p=priceFn(x);if(p==null)return;g+=x.G*x.sl;b+=p*(1-c)*(1-a)*x.sl;});return b?1-g/b:null;}
 function lnDon(items,c,a,priceFn,feeCost,feePrice){let g=feeCost,b=feePrice;items.forEach(x=>{const p=priceFn(x);if(p==null)return;g+=x.G*x.sl;b+=p*(1-c)*(1-a)*x.sl;});return b?1-g/b:null;}
 function cap2Of(items){return items.some(x=>x.xin<x.P)?'Trưởng phòng':'Sales admin';}
 function pendingPk(){const r=[];S.req.lines.forEach((l,i)=>(l.pk||[]).forEach((p,j)=>{if(p.src==='moi'||p.fromQT2)r.push({p:p,l:l,i:i,j:j});}));return r;}
-function sigOf(R){return JSON.stringify([R.pa,R.fee,R.lines.map(x=>[x.l.uid,Math.round(x.G*100),x.P,x.sl,xinOf(x)])]);}
+function sigOf(R){return JSON.stringify([R.pa,R.fee,R.lines.map(x=>[x.l.uid,Math.round(x.G*100),x.P,x.sl])]);}
 function snapChanged(){if(!S.snap)return false;return sigOf(compute(S.dt.pa))!==S.snap.sig;}
 function makeSnap(){
   const R=compute(S.dt.pa);
-  const lines=R.lines.map(x=>({uid:x.l.uid,type:x.l.type,name:lineName(x.l),dvt:DVT[x.l.type],sl:x.sl,nvl:x.nvl,G:x.G,P:x.P,xin:xinOf(x),xinBlank:blank(x.l.xin)}));
+  const lines=R.lines.map(x=>({uid:x.l.uid,type:x.l.type,name:lineName(x.l),dvt:DVT[x.l.type],sl:x.sl,nvl:x.nvl,G:x.G,P:x.P,xin:x.P,xinBlank:true}));
   const used={};R.lines.forEach(x=>x.b.c.forEach(it=>{used[it.k]=priceOf(it.k,S.dt.pa);}));
-  return{ma:MA_DT,time:now(),pa:S.dt.pa,c:R.c,a:R.a,r:n(S.bt.r),ngayTC:n(S.req.ngayTC),lines:lines,cap2:cap2Of(lines),total:R.total,sp:R.sp,fee:R.fee,feeNote:R.s.note,used:used,sig:sigOf(R)};
+  return{ma:MA_DT,time:now(),pa:S.dt.pa,c:R.c,a:R.a,r:n(S.bt.r),ngayTC:n(S.req.ngayTC),lines:lines,cap2:cap2Of(lines),total:R.total,sp:R.sp,fee:R.fee,feeNote:R.s.note,used:used,sig:sigOf(R),xinDone:false,lydo:''};
 }
 
 /* =====================================================================
@@ -482,8 +484,9 @@ const CALC={
   svc(){return svcTable(compute(S.dt.pa));},
   dtStatus(){
     const R=compute(S.dt.pa),pend=pendingPk().filter(x=>x.p.src==='moi');let h='';
-    if(pend.length) h+=co('warn','Phụ kiện mới chưa có giá — đã tạo phiếu QT2',pend.map(x=>'<b>'+esc(x.p.ten||'Phụ kiện mới')+'</b> (dòng '+(x.i+1)+', '+fmtI(n(x.p.sl))+' cái/thùng)').join('; ')
-      +'. Dòng thùng đang ở trạng thái <b>chờ giá</b>, không được coi là 0 đồng. Lõi và thanh V vẫn tính bình thường, nhưng cả dự toán chưa được chốt cho tới khi QT2 xác nhận giá.<br><button class="btn btn-sm btn-q2" onclick="go(\'q2\',0)">Mở QT2 — tìm nguồn phụ kiện</button>');
+    if(pend.length) h+=co('warn','Phụ kiện mới chưa có nhà cung cấp — cần chuyển QT2',pend.map(x=>'<b>'+esc(x.p.ten||'Phụ kiện mới')+'</b> (dòng '+(x.i+1)+', '+fmtI(n(x.p.sl))+' cái/thùng)').join('; ')
+      +'. Dòng thùng đang <b>chờ giá</b>, không được coi là 0 đồng; lõi và thanh V vẫn tính bình thường. Người tính giá chọn chuyển sang QT2 trên Service để bộ phận tìm nguồn lấy báo giá — dự toán chưa chốt được cho tới khi QT2 xác nhận giá.<br>'
+      +(S.q2.created?'<button class="btn btn-sm btn-q2" onclick="go(\'q2\',0)">Đã chuyển QT2 — mở phiếu</button>':'<button class="btn btn-sm btn-q2" onclick="act(\'taoQT2\')">Chuyển sang QT2 — tìm nguồn phụ kiện</button>'));
     const other=R.lines.filter(x=>x.valid&&x.miss.some(k=>k.indexOf('pkm:')!==0));
     if(other.length) h+=co('danger','Thiếu đơn giá vật tư',other.map(x=>esc(lineName(x.l))+': '+esc(missNames(x.miss.filter(k=>k.indexOf('pkm:')!==0)))).join('<br>')+'<br>Bổ sung đơn giá ở Base Table.');
     if(R.lines.some(x=>!x.valid)) h+=co('danger','Có dòng thiếu quy cách hoặc số lượng','Dùng mục "Trả Sale bổ sung" cuối trang.');
@@ -492,18 +495,18 @@ const CALC={
     return h;},
   bom(){return bomTable(compute(S.dt.pa));},
   price(){const R=compute(S.dt.pa);
-    const items=R.lines.filter(x=>x.ok).map(x=>({G:x.G,P:x.P,sl:x.sl,xin:xinOf(x)}));
-    const tongXin=items.reduce((t,x)=>t+x.xin*x.sl,0)+R.fee,ln=lnDon(items,R.c,R.a,x=>x.xin,R.fee,R.fee);
-    return priceTable(R,true)
-      +'<div class="fhint">P = ROUND(G / (1 − m) / (1 − c) / (1 − a), 0) với m theo nhóm SP, c = '+pct(R.c,0)+' (Sale đề nghị), a = n/365 × r = '+fmt(n(S.req.ngayTC),0)+'/365 × '+fmt(n(S.bt.r),0)+'% = '+pct(R.a,4)+'. LN = 1 − G / [P_xin × (1 − c) × (1 − a)] (ô G22). Phí dịch vụ tính trọn đơn, thu đúng bằng chi phí (không cộng LN, hoa hồng, trả chậm); LN toàn đơn có tính cả khoản này.</div>'
+    return priceTable(R,false)
+      +'<div class="fhint">P = ROUND(G / (1 − m) / (1 − c) / (1 − a), 0) với m theo nhóm SP, c = '+pct(R.c,0)+' (Sale đề nghị), a = n/365 × r = '+fmt(n(S.req.ngayTC),0)+'/365 × '+fmt(n(S.bt.r),0)+'% = '+pct(R.a,4)+'. Phí dịch vụ tính trọn đơn, thu đúng bằng chi phí (không cộng LN, hoa hồng, trả chậm).</div>'
       +'<div class="mg"><div class="m m-blue"><div class="m-v">'+(R.total==null?'—':fmtI(R.total)+' đ')+'</div><div class="m-l">Tổng cả đơn theo giá đề xuất (chưa VAT)</div></div>'
-      +'<div class="m"><div class="m-v">'+(R.total==null?'—':fmtI(tongXin)+' đ')+'</div><div class="m-l">Tổng cả đơn theo giá Sale xin duyệt</div></div>'
-      +'<div class="m m-green"><div class="m-v">'+(R.total==null||ln==null?'—':pct(ln))+'</div><div class="m-l">LN toàn đơn theo giá xin duyệt</div></div>'
-      +'<div class="m m-amber"><div class="m-v">'+(R.total==null?'—':cap2Of(items))+'</div><div class="m-l">Người duyệt cấp 2 dự kiến</div></div></div>';},
+      +'<div class="m"><div class="m-v">'+fmtI(R.fee)+' đ</div><div class="m-l">Phí dịch vụ trọn đơn</div></div></div>';},
   dtSnap(){
-    if(!S.snap) return co('info','Chưa chốt dự toán','Khi bấm "Chốt dự toán & trình duyệt", hệ thống lưu bản chụp BOM, đơn giá và tham số đang dùng. Sau đó Base Table có đổi giá thì dự toán đã chốt vẫn giữ nguyên.');
-    if(snapChanged()) return co('warn','Dữ liệu nguồn đã thay đổi sau khi chốt ('+esc(S.snap.time)+')','Dự toán '+S.snap.ma+' đã chốt vẫn giữ nguyên số cũ; bảng trên đang là số tính lại theo dữ liệu mới. Muốn áp dụng số mới thì bấm "Tính lại & chốt lại" — luồng duyệt chạy lại từ cấp 1.');
-    return co('ok','Đã chốt dự toán '+S.snap.ma+' lúc '+esc(S.snap.time),'Tổng giá đề xuất '+fmtI(S.snap.total)+' đ. Người duyệt cấp 2: '+S.snap.cap2+'.');},
+    if(!S.snap) return co('info','Chưa chốt dự toán','Bấm "Chốt & gửi giá đề xuất cho Sale": hệ thống lưu bản chụp BOM, đơn giá, tham số đang dùng và gửi giá đề xuất từng sản phẩm cho Sale (bước 3). Sau đó Base Table có đổi giá thì dự toán đã chốt vẫn giữ nguyên.');
+    if(snapChanged()) return co('warn','Dữ liệu nguồn đã thay đổi sau khi chốt ('+esc(S.snap.time)+')','Dự toán '+S.snap.ma+' đã chốt vẫn giữ nguyên số cũ; bảng trên đang là số tính lại theo dữ liệu mới. Muốn áp dụng số mới thì bấm "Tính lại & chốt lại" — Sale nhập lại giá xin duyệt và luồng duyệt chạy lại.');
+    return co('ok','Đã chốt dự toán '+S.snap.ma+' lúc '+esc(S.snap.time),'Tổng giá đề xuất '+fmtI(S.snap.total)+' đ. Đã gửi giá đề xuất cho Sale ở bước 3.');},
+  xd(){if(!S.snap)return'';const it=S.snap.lines.map(x=>({P:x.P,xin:xdVal(x)}));const below=it.filter(x=>x.xin<x.P).length;
+    const tong=S.snap.lines.reduce((t,x)=>t+xdVal(x)*x.sl,0)+S.snap.fee;
+    return '<div class="fhint" style="margin:6px 0 10px">Tổng cả đơn theo giá xin duyệt: <b>'+fmtI(tong)+' đ</b> (chưa VAT)</div>'
+      +(below?co('warn','Có '+below+' dòng xin thấp hơn giá đề xuất','Cấp 2 sẽ do Trưởng phòng duyệt. Nên ghi lý do bên dưới.'):co('ok','Mọi dòng xin duyệt ≥ giá đề xuất','Cấp 2 do Sales admin duyệt.'));},
   d2ln(){if(!S.snap)return'';const sp=S.snap;
     const items=sp.lines.map(x=>Object.assign({},x,{ap:apOf(x)}));
     const rows=items.map((x,i)=>'<tr><td>'+(i+1)+'. '+esc(x.name)+'</td><td class="num">'+fmtI(x.ap)+'</td><td class="num">'+pct(lnOf(x.G,x.ap,sp.c,sp.a))+'</td><td class="num">'+fmtI(x.ap*x.sl)+'</td></tr>');
@@ -522,18 +525,20 @@ function refresh(){document.querySelectorAll('[data-calc]').forEach(el=>{const f
    ===================================================================== */
 const Q1=[
   {c:'1',t:'Sale gửi yêu cầu tính giá',d:'Một yêu cầu gồm một hoặc nhiều dòng sản phẩm; mỗi dòng ra BOM và giá riêng',who:'Sale / người yêu cầu',eye:['sale','Sale điền']},
-  {c:'2',t:'Tính BOM & tính giá',d:'n8n tính sẵn ngay khi Sale gửi; người tính giá rà soát, chọn nguồn BOM nếu cần, chốt và trình duyệt',who:'Người quản lý BOM / tính giá',eye:['int','Nội bộ — Sale không thấy']},
-  {c:'3',t:'Duyệt cấp 1 — Sales admin',d:'Xem giá đề xuất, giá xin duyệt và lợi nhuận theo mô hình',who:'Sales admin',eye:['int','Người duyệt, người tính giá']},
-  {c:'4',t:'Duyệt cấp 2 — theo điều kiện giá',d:'Giá xin duyệt ≥ giá đề xuất: Sales admin; thấp hơn: Trưởng phòng',who:'Sales admin hoặc Trưởng phòng',eye:['int','Người duyệt, người tính giá']},
-  {c:'5',t:'Sale nhận giá được duyệt',d:'Sale chỉ nhận đơn giá cuối cùng và mã dự toán để lập báo giá',who:'Sale',eye:['sale','Sale thấy — chỉ đơn giá']}
+  {c:'2',t:'Tính BOM & tính giá',d:'n8n tính sẵn khi Sale gửi; người tính giá rà soát, chốt và gửi giá đề xuất cho Sale',who:'Người quản lý BOM / tính giá',eye:['int','Nội bộ — Sale không thấy']},
+  {c:'3',t:'Sale nhập giá xin duyệt',d:'Sale xem giá đề xuất từng sản phẩm và đề xuất giá xin duyệt',who:'Sale',eye:['sale','Sale thấy — chỉ giá đề xuất']},
+  {c:'4',t:'Duyệt cấp 1 — Sales admin',d:'Xem giá đề xuất, giá xin duyệt và lợi nhuận theo mô hình',who:'Sales admin',eye:['int','Người duyệt, người tính giá']},
+  {c:'5',t:'Duyệt cấp 2 — theo điều kiện giá',d:'Giá xin duyệt ≥ giá đề xuất: Sales admin; thấp hơn: Trưởng phòng',who:'Sales admin hoặc Trưởng phòng',eye:['int','Người duyệt, người tính giá']},
+  {c:'6',t:'Sale nhận giá được duyệt',d:'Sale chỉ nhận đơn giá cuối cùng và mã dự toán để lập báo giá',who:'Sale',eye:['sale','Sale thấy — chỉ đơn giá']}
 ];
 const Q2=[
-  {c:'C1',t:'Tiếp nhận phụ kiện cần tìm nguồn',d:'Phiếu tự tạo khi n8n phát hiện phụ kiện không có trong danh mục',who:'Bộ phận tìm nguồn cung (chưa chốt tên bộ phận)',eye:['int','Bộ phận tìm nguồn, người tính giá']},
+  {c:'C1',t:'Tiếp nhận phụ kiện cần tìm nguồn',d:'Người tính giá chuyển sang từ QT1 bước 2 khi phụ kiện chưa có nhà cung cấp',who:'Bộ phận tìm nguồn cung (chưa chốt tên bộ phận)',eye:['int','Bộ phận tìm nguồn, người tính giá']},
   {c:'C2',t:'Lấy báo giá / phương án đáp ứng',d:'Nhà cung cấp hoặc cách tự sản xuất, đơn giá, hiệu lực báo giá',who:'Bộ phận tìm nguồn cung',eye:['int','Bộ phận tìm nguồn, người tính giá']},
   {c:'C3',t:'Xác nhận giá & cập nhật danh mục',d:'Đưa phụ kiện vào danh mục ở Base Table, n8n tính lại dự toán của phiếu gốc',who:'Người tính giá',eye:['int','Người tính giá']}
 ];
 function statusQ1(){
   if(S.approved) return['st-ok','Đã duyệt — đã trả giá cho Sale'];
+  if(S.snap&&!S.snap.xinDone) return['st-wait','Chờ Sale nhập giá xin duyệt'];
   if(S.snap) return S.d1.kq===D1_OK?['st-run','Chờ duyệt cấp 2 ('+S.snap.cap2+')']:['st-run','Chờ duyệt cấp 1'];
   if(S.kt.tra) return['st-wait','Trả Sale bổ sung'];
   if(S.done.q1_0) return pendingPk().some(x=>x.p.src==='moi')?['st-wait','Đang tính giá — chờ giá phụ kiện']:['st-run','Đang tính BOM & giá'];
@@ -548,23 +553,22 @@ function lineCard(l,i){
   if(l.type==='loi'){F.push(fld('Đường kính D (mm)',b+'d',{type:'num'}),fld('Chiều cao H (mm)',b+'h',{type:'num'}),fld('Độ dày T (mm)',b+'t',{type:'num'}),fld('Số lượng (cái)',b+'sl',{type:'num'}));}
   else if(l.type==='v'){F.push(fld('Cạnh C1 (mm)',b+'c1',{type:'num'}),fld('Cạnh C2 (mm)',b+'c2',{type:'num'}),fld('Độ dày T (mm)',b+'t',{type:'num'}),fld('Chiều dài (mm)',b+'l',{type:'num',hint:'Báo giá theo thanh cần chiều dài'}),fld('Số lượng (thanh)',b+'sl',{type:'num'}));}
   else{F.push(fld('OD — đường kính ngoài (mm)',b+'od',{type:'num'}),fld('OH — chiều cao ngoài (mm)',b+'oh',{type:'num'}),fld('ID — đường kính trong (mm)',b+'id',{type:'num'}),fld('IH — chiều cao trong (mm)',b+'ih',{type:'num'}),fld('Số lượng (thùng)',b+'sl',{type:'num'}));}
-  F.push(fld('Giá xin duyệt (đ/'+DVT[l.type]+')',b+'xin',{type:'num',kind:'assume',ph:'Để trống nếu chưa có',hint:'Tuỳ chọn. Để trống thì xin duyệt theo giá đề xuất của hệ thống.'}));
   let pk='';
   if(l.type==='thung'){
     const cat=Object.keys(S.bt.pk).map(k=>[k,S.bt.pk[k].ten]);
     const rows=(l.pk||[]).map((p,j)=>{const pb=b+'pk.'+j+'.';
       const name=p.src==='dm'?(cat.length?cin(pb+'key',{type:'sel',opts:cat}):'<span class="miss">Danh mục trống</span>')+(p.fromQT2?' <span class="chip c-ok">Giá từ QT2</span>':''):cin(pb+'ten',{type:'text',ph:'Tên phụ kiện'});
       return '<tr><td style="width:190px">'+cin(pb+'src',{type:'sel',opts:[['dm','Chọn từ danh mục'],['moi','Phụ kiện mới (chưa có)']],rr:1})+'</td><td>'+name+'</td><td>'+cin(pb+'quycach',{type:'text',ph:'Quy cách, mô tả'})+'</td><td style="width:100px">'+cin(pb+'sl')+'</td><td style="width:60px"><button class="btn btn-sm btn-x" onclick="rmPk('+i+','+j+')" aria-label="Xoá phụ kiện">Xoá</button></td></tr>';});
-    pk='<div class="pk-note">Phụ kiện khách yêu cầu thêm (mỗi thùng). Nắp đậy, quai xách, đai kẹp, nắp gỗ đáy đã nằm trong BOM chuẩn nên không khai ở đây. Phụ kiện chưa có trong danh mục thì chọn "Phụ kiện mới" — hệ thống tự mở phiếu tìm nguồn.</div>'
+    pk='<div class="pk-note">Phụ kiện khách yêu cầu thêm (mỗi thùng). Nắp đậy, quai xách, đai kẹp, nắp gỗ đáy đã nằm trong BOM chuẩn nên không khai ở đây. Phụ kiện chưa có trong danh mục thì chọn "Phụ kiện mới" — người tính giá sẽ chuyển sang QT2 để tìm nhà cung cấp.</div>'
       +tbl(['Nguồn','Phụ kiện','Quy cách','SL / thùng',''],rows.length?rows:['<tr><td colspan="5" class="fhint">Không có phụ kiện đi kèm</td></tr>'])
       +'<div style="margin-top:8px"><button class="btn btn-sm" onclick="addPk('+i+')">+ Thêm phụ kiện</button></div>';
   }
-  return '<div class="line"><div class="line-h"><b>Dòng '+(i+1)+' — '+TYPE_L[l.type]+'</b>'+(S.req.lines.length>1?'<button class="btn btn-sm btn-x x" onclick="rmLine('+i+')">Xoá dòng</button>':'')+'</div>'+grid(F,l.type==='loi'?5:l.type==='v'?3:3)+pk+'</div>';
+  return '<div class="line"><div class="line-h"><b>Dòng '+(i+1)+' — '+TYPE_L[l.type]+'</b>'+(S.req.lines.length>1?'<button class="btn btn-sm btn-x x" onclick="rmLine('+i+')">Xoá dòng</button>':'')+'</div>'+grid(F,l.type==='loi'?4:l.type==='v'?5:5)+pk+'</div>';
 }
 function rS1(){
   let h='';
   if(S.kt.tra) h+=co('warn','Người tính giá yêu cầu bổ sung',esc(S.kt.ykien||'(chưa ghi nội dung)')+'<br>Sửa thông tin rồi bấm "Gửi yêu cầu" lại.');
-  h+=co('info','Sale chỉ thấy form này và kết quả ở bước 5','BOM, chi phí, giá vốn và lợi nhuận là thông tin nội bộ của người tính giá và người duyệt. Hệ số kỹ thuật (0,965; 0,135; 0,7…) do người quản lý BOM quản lý, Sale không sửa.');
+  h+=co('info','Sale chỉ thấy form này, giá đề xuất ở bước 3 và giá được duyệt ở bước 6','BOM, chi phí, giá vốn và lợi nhuận là thông tin nội bộ của người tính giá và người duyệt. Hệ số kỹ thuật (0,965; 0,135; 0,7…) do người quản lý BOM quản lý, Sale không sửa.');
   h+=sec('Thông tin chung',grid([fld('Khách hàng','req.khach'),fld('Người yêu cầu','req.nguoiyc'),fld('Ngày yêu cầu','req.ngay',{type:'date'}),fld('Mã yêu cầu','',{type:'ro',val:MA_YC}),fld('Địa chỉ giao hàng','req.diachi',{full:1})],4));
   h+=sec('Dòng sản phẩm',S.req.lines.map(lineCard).join('')+'<div class="addbar"><button class="btn btn-sm" onclick="addLine(\'loi\')">+ Lõi giấy</button><button class="btn btn-sm" onclick="addLine(\'v\')">+ Thanh V</button><button class="btn btn-sm" onclick="addLine(\'thung\')">+ Thùng giấy</button></div>',S.req.lines.length+' dòng');
   const g=[fld('Vận chuyển','req.vc',{type:'sel',opts:VC_OPT,rr:1,hint:'Tùy chọn — đường bộ / đường biển / đường sắt (sheet TINH GIA)'})];
@@ -604,32 +608,46 @@ function rS2(){
     +sec('Trình duyệt',grid([fld('Người tính giá','kt.nguoi'),fld('Ghi chú trình duyệt','dt.ghichu',{type:'area',full:1})])+'<div style="margin-top:12px">'+calc('dtSnap')+'</div>')
     +dsec('Trả Sale bổ sung',grid([fld('Nội dung cần Sale bổ sung','kt.ykien',{type:'area',full:1,ph:'VD: thiếu chiều dài thanh V, thiếu phí vận chuyển đường biển'})])+'<div style="margin-top:8px"><button class="btn btn-sm btn-back" onclick="act(\'tra\')">Trả Sale bổ sung</button></div>',false,'khi yêu cầu thiếu thông tin');
 }
+function rSX(){
+  if(!S.snap) return co('warn','Chưa có giá đề xuất','Người tính giá cần chốt dự toán ở bước 2.');
+  const sp=S.snap;let h='';
+  if(S.xd.back) h+=co('warn','Người duyệt yêu cầu điều chỉnh giá xin duyệt',esc(S.xd.backNote||'(không ghi ý kiến)'));
+  h+=co('info','Sale chỉ thấy giá đề xuất','Không hiển thị BOM, chi phí, giá vốn, lợi nhuận. Ô giá xin duyệt để trống nghĩa là xin theo giá đề xuất.');
+  const rows=sp.lines.map((x,i)=>'<tr><td>'+(i+1)+'. '+esc(x.name)+'</td><td>'+x.dvt+'</td><td class="num">'+fmtI(x.sl)+'</td><td class="num" style="color:var(--q1);font-weight:700">'+fmtI(x.P)+'</td><td style="width:170px">'+cin('xd.gia.'+x.uid,{ph:'= giá đề xuất'})+'</td></tr>');
+  rows.push('<tr class="grp"><td>Phí vận chuyển & bốc xếp — trọn đơn</td><td>đơn</td><td class="num">1</td><td class="num">'+fmtI(sp.fee)+'</td><td class="fhint" style="font-weight:400">Theo lựa chọn ở bước 1</td></tr>');
+  h+=sec('Giá đề xuất của công ty — '+sp.ma,tbl(['Sản phẩm','ĐVT',['SL'],['Giá đề xuất (đ)'],['Giá xin duyệt (đ)']],rows)+calc('xd'));
+  h+=sec('Lý do xin giá',grid([fld('Lý do (nếu thấp hơn giá đề xuất)','xd.lydo',{type:'area',full:1,ph:'VD: giá đối thủ, khách truyền thống, sản lượng lớn'})]));
+  return h;
+}
 function snapSummary(){
   const sp=S.snap;
+  const pre=sp.lydo?co('info','Lý do Sale xin giá',esc(sp.lydo)):'';
   const rows=sp.lines.map((x,i)=>{const ln=lnOf(x.G,x.xin,sp.c,sp.a);const below=x.xin<x.P;
     return '<tr><td>'+(i+1)+'. '+esc(x.name)+'</td><td class="num">'+fmtI(x.sl)+'</td><td class="num">'+fmt(x.G,2)+'</td><td class="num" style="color:var(--q1);font-weight:700">'+fmtI(x.P)+'</td><td class="num">'+fmtI(x.xin)+(x.xinBlank?'<div class="fhint">theo giá đề xuất</div>':'')+'</td><td class="num">'+pct(ln)+'</td><td><span class="chip '+(below?'c-tp':'c-sa')+'">'+(below?'Thấp hơn đề xuất':'≥ đề xuất')+'</span></td></tr>';});
   rows.push('<tr class="grp"><td>Phí dịch vụ giao hàng — trọn đơn<div class="fhint" style="font-weight:400">'+esc(sp.feeNote||'')+'</div></td><td class="num">1 đơn</td><td class="num">'+fmtI(sp.fee)+'</td><td class="num" style="color:var(--q1)">'+fmtI(sp.fee)+'</td><td class="num">'+fmtI(sp.fee)+'</td><td class="num">0,00%</td><td><span class="chip c-no">Thu đúng chi phí</span></td></tr>');
   const ln=lnDon(sp.lines,sp.c,sp.a,x=>x.xin,sp.fee,sp.fee),tongX=sp.lines.reduce((t,x)=>t+x.xin*x.sl,0)+sp.fee;
-  return tbl(['Dòng',['SL'],['Giá vốn'],['Giá đề xuất'],['Giá xin duyệt'],['LN theo giá xin'],'So với đề xuất'],rows)
+  return pre+tbl(['Dòng',['SL'],['Giá vốn'],['Giá đề xuất'],['Giá xin duyệt'],['LN theo giá xin'],'So với đề xuất'],rows)
     +'<div class="mg"><div class="m m-blue"><div class="m-v">'+fmtI(sp.total)+' đ</div><div class="m-l">Tổng cả đơn theo giá đề xuất</div></div><div class="m"><div class="m-v">'+fmtI(tongX)+' đ</div><div class="m-l">Tổng cả đơn theo giá xin duyệt</div></div><div class="m m-green"><div class="m-v">'+pct(ln)+'</div><div class="m-l">LN toàn đơn (theo giá xin)</div></div><div class="m m-amber"><div class="m-v">'+sp.cap2+'</div><div class="m-l">Người duyệt cấp 2</div></div></div>'
     +'<div class="fhint" style="margin-top:6px">Dự toán '+sp.ma+', chốt lúc '+esc(sp.time)+'. Số liệu lấy từ bản chụp, không đổi theo Base Table.</div>';
 }
 function rS4(){
   if(!S.snap) return co('warn','Chưa có dự toán được chốt','Quay lại bước 2 để chốt dự toán trước khi duyệt.');
+  if(!S.snap.xinDone) return co('warn','Sale chưa gửi giá xin duyệt','Chờ Sale ở bước 3.');
   return sec('Hồ sơ trình duyệt',snapSummary())
     +co('info','Quy tắc duyệt (sheet tổng hợp)','Cấp 1 luôn là Sales admin. Cấp 2: nếu giá xin duyệt ≥ giá đề xuất thì Sales admin; thấp hơn thì Trưởng phòng. Đơn nhiều dòng: demo áp dụng "có bất kỳ dòng nào thấp hơn thì lên Trưởng phòng" — cần doanh nghiệp xác nhận.')
-    +sec('Ý kiến cấp 1',grid([fld('Người duyệt','d1.nguoi'),fld('Ngày duyệt','d1.ngay',{type:'date'}),fld('Kết quả','d1.kq',{type:'sel',opts:['',D1_OK,D1_BACK],rr:1}),fld('Ý kiến','d1.ykien',{type:'area',full:1})],3));
+    +sec('Ý kiến cấp 1',grid([fld('Người duyệt','d1.nguoi'),fld('Ngày duyệt','d1.ngay',{type:'date'}),fld('Kết quả','d1.kq',{type:'sel',opts:['',D1_OK,D1_SALE,D1_BACK],rr:1}),fld('Ý kiến','d1.ykien',{type:'area',full:1})],3));
 }
 function rS5(){
   if(!S.snap) return co('warn','Chưa có dự toán được chốt','Quay lại bước 2.');
-  if(S.d1.kq!==D1_OK) return co('warn','Cấp 1 chưa duyệt','Sales admin cần duyệt ở bước 3 trước.');
+  if(!S.snap.xinDone) return co('warn','Sale chưa gửi giá xin duyệt','Chờ Sale ở bước 3.');
+  if(S.d1.kq!==D1_OK) return co('warn','Cấp 1 chưa duyệt','Sales admin cần duyệt ở bước 4 trước.');
   const sp=S.snap,tp=sp.cap2==='Trưởng phòng';
   const rows=sp.lines.map((x,i)=>'<tr><td>'+(i+1)+'. '+esc(x.name)+'</td><td class="num">'+fmtI(x.P)+'</td><td class="num">'+fmtI(x.xin)+'</td><td style="width:170px">'+cin('d2.gia.'+x.uid,{fb:x.xin})+'</td></tr>');
   rows.push('<tr class="grp"><td>Phí dịch vụ giao hàng — trọn đơn</td><td class="num">'+fmtI(sp.fee)+'</td><td class="num">'+fmtI(sp.fee)+'</td><td style="width:170px">'+cin('d2.fee',{fb:sp.fee})+'</td></tr>');
   return sec('Hồ sơ trình duyệt',snapSummary())
     +co(tp?'warn':'ok','Cấp 2 thuộc '+sp.cap2,tp?'Có dòng Sale xin duyệt thấp hơn giá đề xuất nên phải lên Trưởng phòng.':'Mọi dòng xin duyệt ≥ giá đề xuất nên cấp 2 vẫn là Sales admin. Chưa chốt đây là 2 lượt duyệt riêng hay gộp một lượt — demo giữ 2 lượt.')
     +sec('Giá được duyệt',co('info','Người duyệt có thể chốt giá khác giá xin duyệt','Ví dụ từ buổi trao đổi: Sale xin 35.800, sếp duyệt 43.000 hoặc yêu cầu 42.000. Mặc định bằng giá xin duyệt. Phí dịch vụ trọn đơn cũng chỉnh được ở đây (ví dụ hỗ trợ/miễn phí giao hàng).')+tbl(['Dòng',['Giá đề xuất'],['Giá xin duyệt'],['Giá được duyệt']],rows)+'<div style="margin-top:10px">'+calc('d2ln')+'</div>')
-    +sec('Ý kiến cấp 2',grid([fld('Người duyệt','d2.nguoi',{fb:tp?'Nguyễn Văn Long — Trưởng phòng Kinh doanh':'Đặng Thị Mai — Sales admin'}),fld('Ngày duyệt','d2.ngay',{type:'date'}),fld('Kết quả','d2.kq',{type:'sel',opts:['',D2_OK,D2_BACK],rr:1}),fld('Ý kiến','d2.ykien',{type:'area',full:1})],3));
+    +sec('Ý kiến cấp 2',grid([fld('Người duyệt','d2.nguoi',{fb:tp?'Nguyễn Văn Long — Trưởng phòng Kinh doanh':'Đặng Thị Mai — Sales admin'}),fld('Ngày duyệt','d2.ngay',{type:'date'}),fld('Kết quả','d2.kq',{type:'sel',opts:['',D2_OK,D2_SALE,D2_BACK],rr:1}),fld('Ý kiến','d2.ykien',{type:'area',full:1})],3));
 }
 function rS6(){
   if(!S.approved) return co('warn','Chưa có giá được duyệt','Sale chỉ nhận kết quả sau khi cấp 2 duyệt.');
@@ -648,16 +666,19 @@ function rS6(){
 /* =====================================================================
    QT2 — TÌM NGUỒN PHỤ KIỆN MỚI
    ===================================================================== */
+function qt2Guard(){return co('info','Chưa có phiếu tìm nguồn','Phiếu QT2 chỉ tạo khi người tính giá chọn "Chuyển sang QT2" ở QT1 bước 2 — trường hợp phụ kiện chưa có nhà cung cấp.')+'<button class="btn btn-sm" onclick="go(\'q1\',1)">Mở QT1 bước 2</button>';}
 function rC1(){
+  if(!S.q2.created) return qt2Guard();
   const L=pendingPk();
   if(!L.length) return co('ok','Yêu cầu hiện không có phụ kiện mới','Mọi phụ kiện đã chọn từ danh mục, không cần tìm nguồn.');
   const rows=L.map(x=>{const it=S.q2.items[x.p.uid]||{};const tot=n(x.p.sl)*n(x.l.sl);
     return '<tr><td><b>'+esc(x.p.ten||'Phụ kiện mới')+'</b></td><td>'+esc(x.p.quycach||'—')+'</td><td>Dòng '+(x.i+1)+' — '+esc(lineName(x.l))+'</td><td class="num">'+fmtI(n(x.p.sl))+'</td><td class="num">'+fmtI(tot)+'</td><td>'+(x.p.fromQT2?'<span class="chip c-ok">Đã vào danh mục</span>':it.tt==='Đã có giá'?'<span class="chip c-fact">Đã có giá — chờ xác nhận</span>':'<span class="chip c-wait">Chờ giá</span>')+'</td></tr>';});
-  return co('nn','Phiếu này do n8n tạo tự động','Khi dự toán của '+MA_YC+' có phụ kiện không có trong danh mục, n8n mở phiếu tìm nguồn, gắn mã yêu cầu gốc và danh sách phụ kiện dưới đây.')
+  return co('info','Phiếu do người tính giá chuyển sang','Tạo từ QT1 bước 2 của '+MA_YC+' trên Base Service, liên kết phiếu gốc. Danh sách phụ kiện chưa có nhà cung cấp lấy từ yêu cầu của Sale.')
     +sec('Phụ kiện cần tìm nguồn — yêu cầu '+MA_YC,tbl(['Phụ kiện','Quy cách','Thuộc dòng',['SL / thùng'],['Tổng SL'],'Trạng thái'],rows))
     +sec('Phân công',grid([fld('Bộ phận / người phụ trách','q2.nguoi',{hint:'Tài liệu chưa chốt bộ phận thực hiện'}),fld('Hạn phản hồi','q2.han',{type:'date'})],2));
 }
 function rC2(){
+  if(!S.q2.created) return qt2Guard();
   const L=pendingPk();
   if(!L.length) return co('ok','Không có phụ kiện cần tìm nguồn','');
   return co('info','Có giá để dự toán chưa phải là đã mua','Đặt hàng, nhập kho, thanh toán nhà cung cấp thuộc quy trình mua hàng riêng. Phụ kiện có thể ghi thẳng vào chi phí, không bắt buộc qua nhập kho chỉ để tính dự toán.')
@@ -665,6 +686,7 @@ function rC2(){
       return sec((x.p.ten||'Phụ kiện mới')+(x.p.quycach?' — '+x.p.quycach:''),grid([fld('Nhà cung cấp / nơi sản xuất',b+'ncc'),fld('Phương án',b+'phuongan',{type:'sel',opts:['Mua ngoài','Tự sản xuất']}),fld('Đơn giá (đ/cái)',b+'gia',{type:'num',kind:'assume',hint:'8.000 đ là giả định của case (mục 8.5), không phải giá NCC thật'}),fld('Hiệu lực báo giá',b+'hieuluc'),fld('Tài liệu tham chiếu',b+'tailieu',{ph:'Số báo giá, file đính kèm'}),fld('Trạng thái',b+'tt',{type:'sel',opts:['Chờ giá','Đã có giá']})],3));}).join('');
 }
 function rC3(){
+  if(!S.q2.created) return qt2Guard();
   const L=pendingPk();
   if(!L.length) return co('ok','Không có phụ kiện cần xác nhận','');
   const rows=L.map(x=>{const it=S.q2.items[x.p.uid]||{};const ready=it.tt==='Đã có giá'&&n(it.gia)>0;
@@ -691,14 +713,21 @@ function unconfirmPk(uid){const f=findPk(uid);if(!f)return;delete S.bt.pk[f.p.ke
 function act(a){
   if(a==='gui'){S.kt.tra=false;hist('Gửi yêu cầu tính giá '+MA_YC+' ('+S.req.lines.length+' dòng), n8n tính BOM & giá',S.req.nguoiyc);S.done.q1_0=1;return go('q1',1);}
   if(a==='tra'){hist('Trả Sale bổ sung: '+(S.kt.ykien||''),S.kt.nguoi);S.kt.tra=true;S.snap=null;S.approved=null;S.done.q1_0=0;S.done.q1_1=0;return go('q1',0);}
-  if(a==='chot'){const R=compute(S.dt.pa);if(!R.ok)return;S.snap=makeSnap();S.approved=null;S.d1.kq='';S.d2.kq='';S.d2.gia={};S.d2.fee='';S.done.q1_2=0;S.done.q1_3=0;S.done.q1_4=0;
-    hist('Chốt dự toán '+MA_DT+', trình duyệt',S.kt.nguoi);S.done.q1_1=1;return go('q1',2);}
-  if(a==='d1'){if(S.d1.kq===D1_OK){hist('Duyệt cấp 1',S.d1.nguoi);S.done.q1_2=1;return go('q1',3);}
-    if(S.d1.kq===D1_BACK){hist('Cấp 1 trả về rà soát: '+(S.d1.ykien||''),S.d1.nguoi);S.snap=null;S.d1.kq='';S.done.q1_1=0;return go('q1',1);}return;}
+  if(a==='taoQT2'){S.q2.created=true;hist('Chuyển QT2 tìm nguồn: '+pendingPk().filter(x=>x.p.src==='moi').map(x=>x.p.ten||'phụ kiện mới').join(', '),S.kt.nguoi);return go('q2',0);}
+  if(a==='chot'){const R=compute(S.dt.pa);if(!R.ok)return;S.snap=makeSnap();S.approved=null;S.xd.back=false;S.d1.kq='';S.d2.kq='';S.d2.gia={};S.d2.fee='';[2,3,4,5].forEach(k=>S.done['q1_'+k]=0);
+    hist('Chốt dự toán '+MA_DT+', gửi giá đề xuất cho Sale',S.kt.nguoi);S.done.q1_1=1;return go('q1',2);}
+  if(a==='xin'){const sp=S.snap;if(!sp)return;sp.lines.forEach(x=>{x.xinBlank=blank(S.xd.gia[x.uid]);x.xin=xdVal(x);});sp.cap2=cap2Of(sp.lines);sp.xinDone=true;sp.lydo=S.xd.lydo;S.xd.back=false;
+    S.approved=null;S.d1.kq='';S.d2.kq='';S.d2.gia={};S.d2.fee='';hist('Sale gửi giá xin duyệt (cấp 2: '+sp.cap2+')',S.req.nguoiyc);S.done.q1_2=1;return go('q1',3);}
+  const toSale=(note,who)=>{hist('Trả Sale điều chỉnh giá xin duyệt: '+(note||''),who);S.snap.xinDone=false;S.xd.back=true;S.xd.backNote=note;S.d1.kq='';S.d2.kq='';S.done.q1_2=0;S.done.q1_3=0;return go('q1',2);};
+  const toCalc=(note,who,lvl)=>{hist('Cấp '+lvl+' trả về rà soát: '+(note||''),who);S.snap=null;S.approved=null;S.d1.kq='';S.d2.kq='';S.done.q1_1=0;S.done.q1_2=0;S.done.q1_3=0;return go('q1',1);};
+  if(a==='d1'){if(S.d1.kq===D1_OK){hist('Duyệt cấp 1',S.d1.nguoi);S.done.q1_3=1;return go('q1',4);}
+    if(S.d1.kq===D1_SALE) return toSale(S.d1.ykien,S.d1.nguoi);
+    if(S.d1.kq===D1_BACK) return toCalc(S.d1.ykien,S.d1.nguoi,1);return;}
   if(a==='d2'){const sp=S.snap;const nguoi=S.d2.nguoi||(sp.cap2==='Trưởng phòng'?'Nguyễn Văn Long — Trưởng phòng Kinh doanh':'Đặng Thị Mai — Sales admin');
     if(S.d2.kq===D2_OK){S.approved={ma:sp.ma,cap2:sp.cap2,nguoi:nguoi,time:now(),lines:sp.lines.map(x=>({name:x.name,dvt:x.dvt,sl:x.sl,gia:apOf(x)})),fee:apFee()};
-      hist('Duyệt cấp 2 ('+sp.cap2+'), trả giá cho Sale',nguoi);S.done.q1_3=1;S.done.q1_4=1;return go('q1',4);}
-    if(S.d2.kq===D2_BACK){hist('Cấp 2 trả về rà soát: '+(S.d2.ykien||''),nguoi);S.snap=null;S.approved=null;S.d1.kq='';S.d2.kq='';S.done.q1_1=0;S.done.q1_2=0;return go('q1',1);}return;}
+      hist('Duyệt cấp 2 ('+sp.cap2+'), trả giá cho Sale',nguoi);S.done.q1_4=1;S.done.q1_5=1;return go('q1',5);}
+    if(S.d2.kq===D2_SALE) return toSale(S.d2.ykien,nguoi);
+    if(S.d2.kq===D2_BACK) return toCalc(S.d2.ykien,nguoi,2);return;}
 }
 function navHTML(){
   const v=S.nav.view,i=S.nav[v],steps=v==='q1'?Q1:Q2;
@@ -707,14 +736,16 @@ function navHTML(){
   if(v==='q1'){
     if(i===0) main='<button class="btn btn-q1" onclick="act(\'gui\')">Gửi yêu cầu</button>';
     if(i===1){const R=compute(S.dt.pa);
-      if(S.snap&&!snapChanged()) main='<button class="btn btn-q1" onclick="go(\'q1\',2)">Đã chốt — sang duyệt cấp 1</button>';
-      else main='<button class="btn btn-q1" '+(R.ok?'':'disabled')+' onclick="act(\'chot\')">'+(S.snap?'Tính lại & chốt lại':'Chốt dự toán & trình duyệt')+'</button>';
+      if(S.snap&&!snapChanged()) main='<button class="btn btn-q1" onclick="go(\'q1\',2)">Đã chốt — sang bước Sale xin duyệt</button>';
+      else main='<button class="btn btn-q1" '+(R.ok?'':'disabled')+' onclick="act(\'chot\')">'+(S.snap?'Tính lại & chốt lại':'Chốt & gửi giá đề xuất cho Sale')+'</button>';
       if(!R.ok) hint='Chưa chốt được — xem các cảnh báo phía trên';}
-    if(i===2&&S.snap){ if(S.d1.kq===D1_OK) main='<button class="btn btn-q1" onclick="act(\'d1\')">Duyệt — chuyển cấp 2</button>';
-      else if(S.d1.kq===D1_BACK) main='<button class="btn btn-back" onclick="act(\'d1\')">Trả về bước 2</button>'; else hint='Chọn kết quả duyệt'; }
-    if(i===3&&S.snap&&S.d1.kq===D1_OK){ if(S.d2.kq===D2_OK) main='<button class="btn btn-q1" onclick="act(\'d2\')">Duyệt — trả giá cho Sale</button>';
-      else if(S.d2.kq===D2_BACK) main='<button class="btn btn-back" onclick="act(\'d2\')">Trả về bước 2</button>'; else hint='Chọn kết quả duyệt'; }
-    if(i===4) main='<button class="btn" onclick="go(\'ov\')">Về tổng quan</button>';
+    if(i===2&&S.snap) main='<button class="btn btn-q1" onclick="act(\'xin\')">'+(S.snap.xinDone?'Gửi lại giá xin duyệt':'Gửi giá xin duyệt')+'</button>';
+    const bk=(k,a)=>k===D1_SALE||k===D2_SALE?'<button class="btn btn-back" onclick="act(\''+a+'\')">Trả Sale — bước 3</button>':'<button class="btn btn-back" onclick="act(\''+a+'\')">Trả người tính giá — bước 2</button>';
+    if(i===3&&S.snap&&S.snap.xinDone){ if(S.d1.kq===D1_OK) main='<button class="btn btn-q1" onclick="act(\'d1\')">Duyệt — chuyển cấp 2</button>';
+      else if(S.d1.kq) main=bk(S.d1.kq,'d1'); else hint='Chọn kết quả duyệt'; }
+    if(i===4&&S.snap&&S.snap.xinDone&&S.d1.kq===D1_OK){ if(S.d2.kq===D2_OK) main='<button class="btn btn-q1" onclick="act(\'d2\')">Duyệt — trả giá cho Sale</button>';
+      else if(S.d2.kq) main=bk(S.d2.kq,'d2'); else hint='Chọn kết quả duyệt'; }
+    if(i===5) main='<button class="btn" onclick="go(\'ov\')">Về tổng quan</button>';
   } else {
     if(i<2) main='<button class="btn btn-q2" onclick="S.done[\'q2_'+i+'\']=1;go(\'q2\','+(i+1)+')">Tiếp</button>';
     else main='<button class="btn btn-q2" onclick="S.done.q2_2=1;go(\'q1\',1)">Quay lại QT1 — tính BOM & giá</button>';
@@ -731,8 +762,8 @@ function rTabs(){const v=S.nav.view;const t=(k,l)=>'<button class="tab'+(v===k?'
   $('tabs').innerHTML=t('ov','Tổng quan')+t('q1','QT1 — Yêu cầu tính giá & duyệt dự toán')+t('q2','QT2 — Tìm nguồn phụ kiện mới')+'<span class="tab-sep">Chạy ngầm, không hiện với người dùng</span>'+t('bt','Base Table — dữ liệu chủ')+t('nn','n8n — tính dự toán');}
 function rHdr(){const v=S.nav.view;const H={
   ov:['Thuận Phát Hưng — lõi giấy, thanh V, thùng giấy','Quy trình tính giá BOM & duyệt dự toán','2 quy trình người dùng (QT1 chính, QT2 nhánh tìm nguồn) chạy trên Base Service; dữ liệu chủ ở Base Table; n8n tính BOM, giá vốn, giá đề xuất. Case minh họa: lõi D300×H810×T3 ×300, thanh V 50×50×4 dài 1.200 ×500, thùng OD550×OH600×ID330×IH540 ×100 + thước đo, lò xo.'],
-  q1:['Base Service — '+MA_YC,'QT1 — Yêu cầu tính giá & duyệt dự toán','Sale gửi yêu cầu, n8n tính BOM & giá, người tính giá rà soát và chốt, duyệt 2 cấp theo điều kiện giá, Sale nhận đơn giá được duyệt.'],
-  q2:['Base Service — nhánh của QT1','QT2 — Tìm nguồn phụ kiện mới','Chỉ mở khi yêu cầu có phụ kiện chưa có trong danh mục. Có giá thì phụ kiện vào danh mục, dự toán QT1 được tính lại.'],
+  q1:['Base Service — '+MA_YC,'QT1 — Yêu cầu tính giá & duyệt dự toán','Sale gửi yêu cầu, n8n tính BOM & giá, người tính giá chốt và gửi giá đề xuất, Sale nhập giá xin duyệt, duyệt 2 cấp theo điều kiện giá, Sale nhận đơn giá được duyệt.'],
+  q2:['Base Service — nhánh của QT1','QT2 — Tìm nguồn phụ kiện mới','Người tính giá chủ động chuyển sang từ QT1 khi phụ kiện chưa có nhà cung cấp. Có giá thì phụ kiện vào danh mục, dự toán QT1 được tính lại.'],
   bt:['Base Table','Dữ liệu chủ dùng cho tính giá','Người quản lý BOM / tính giá cập nhật chủ động, không đi theo từng đơn. n8n tra theo khoá khi tính.'],
   nn:['n8n','Luồng tính dự toán chạy ngầm','Đọc yêu cầu QT1 + Base Table, tính BOM, chi phí, giá đề xuất, ghi kết quả về QT1 bước 2.']}[v];
   $('hdr').innerHTML='<div class="hdr h-'+v+'"><div class="kicker">'+esc(H[0])+'</div><h1>'+esc(H[1])+'</h1><p>'+esc(H[2])+'</p></div>';}
@@ -741,14 +772,14 @@ function rStepnav(){const v=S.nav.view,el=$('stepnav');
   el.style.display='';el.className='stepnav '+v;const st=v==='q1'?Q1:Q2;
   el.innerHTML='<div class="sn">'+st.map((s,i)=>'<button class="sn-i'+(i===S.nav[v]?' on':'')+(S.done[v+'_'+i]?' done':'')+'" onclick="go(\''+v+'\','+i+')" title="'+esc(s.t)+'"><span class="sn-d">'+(S.done[v+'_'+i]&&i!==S.nav[v]?'✓':s.c)+'</span><span class="sn-l">'+esc(s.t)+'</span></button>'+(i<st.length-1?'<span class="sn-line"></span>':'')).join('')+'</div>';}
 function renderMain(){ensure();const v=S.nav.view;let h='';
-  if(v==='q1'||v==='q2'){const st=(v==='q1'?Q1:Q2)[S.nav[v]];const R=v==='q1'?[rS1,rS2,rS4,rS5,rS6]:[rC1,rC2,rC3];
-    const status=v==='q1'?statusQ1():null;const t5=v==='q1'&&S.nav.q1===3&&S.snap?' — '+S.snap.cap2:'';
+  if(v==='q1'||v==='q2'){const st=(v==='q1'?Q1:Q2)[S.nav[v]];const R=v==='q1'?[rS1,rS2,rSX,rS4,rS5,rS6]:[rC1,rC2,rC3];
+    const status=v==='q1'?statusQ1():null;const t5=v==='q1'&&S.nav.q1===4&&S.snap&&S.snap.xinDone?' — '+S.snap.cap2:'';
     h='<div class="card '+v+'c"><div class="card-h '+v+'"><div class="badge b-'+v+'">'+st.c+'</div><div><div class="card-t">'+esc(st.t+t5)+'</div><div class="card-d">'+esc(st.d)+'</div></div>'+(status?'<span class="status '+status[0]+'">'+esc(status[1])+'</span>':'')+'</div>'
       +'<div class="ibar"><div class="ib"><div class="ib-l">Quy trình</div><div class="ib-v">'+(v==='q1'?'QT1 — chính':'QT2 — nhánh')+'</div></div><div class="ib"><div class="ib-l">Người thực hiện</div><div class="ib-v">'+esc(st.who)+'</div></div><div class="ib"><div class="ib-l">Ai thấy bước này</div><div class="ib-v"><span class="eye eye-'+st.eye[0]+'">'+esc(st.eye[1])+'</span></div></div><div class="ib"><div class="ib-l">Chuyển tiếp</div><div class="ib-v">'+esc(nextText(v,S.nav[v]))+'</div></div></div>'
       +'<div class="body">'+R[S.nav[v]]()+'</div><div class="navr" data-calc="navr"></div></div>';}
   else if(v==='bt') h=rBT(); else if(v==='nn') h=rNN(); else h=rOV();
   $('main').innerHTML=h;refresh();}
-function nextText(v,i){return(v==='q1'?['n8n tính BOM & giá (bước 2)','Chốt: duyệt cấp 1. Phụ kiện mới: QT2. Thiếu thông tin: trả Sale','Duyệt: cấp 2. Trả về: bước 2','Duyệt: trả giá cho Sale. Trả về: bước 2','Sale lập báo giá trên phần mềm hiện có']:['Lấy báo giá (C2)','Xác nhận giá (C3)','Vào danh mục, n8n tính lại, về QT1 bước 2'])[i];}
+function nextText(v,i){return(v==='q1'?['n8n tính BOM & giá (bước 2)','Chốt: gửi giá đề xuất cho Sale. Chưa có NCC: chuyển QT2. Thiếu thông tin: trả Sale','Gửi: duyệt cấp 1','Duyệt: cấp 2. Trả về: Sale hoặc người tính giá','Duyệt: trả giá cho Sale. Trả về: Sale hoặc người tính giá','Sale lập báo giá trên phần mềm hiện có']:['Lấy báo giá (C2)','Xác nhận giá (C3)','Vào danh mục, n8n tính lại, về QT1 bước 2'])[i];}
 
 /* =====================================================================
    BASE TABLE
@@ -788,13 +819,13 @@ function rNN(){
    +node(2,'Đọc dữ liệu','Lấy các dòng sản phẩm, phụ kiện, giao hàng, điều khoản từ QT1 bước 1; lựa chọn vận chuyển, bốc xếp của Sale; nguồn BOM ở bước 2 (mặc định tính từ quy cách); tra Base Table: đơn giá theo mã vật tư, phí xe theo khoảng cách × loại xe, BOM chuẩn thùng, mẫu dự toán theo nhóm SP.')
    +node(3,'Tính BOM từng dòng','Nguồn BOM: BOM chính thức → tính từ quy cách → nhập tay. Lõi: W = D×H×T/385.000. Thanh V: W = (C1+C2−T)×T×0,7/1000 × chiều dài. Thùng: k_H, k_OD, k_ID áp riêng từng dòng, không nhân chung; bung 2 lõi xuống giấy + keo, không cộng thêm giá lõi.')
    +dsec('Kết quả BOM',bomTable(R),false)
-   +node(4,'Kiểm tra phụ kiện','Phụ kiện không có trong danh mục: đặt trạng thái "Chờ giá", tạo phiếu QT2 gắn mã yêu cầu gốc. Không bao giờ coi là 0 đồng; các dòng khác vẫn tính.')
+   +node(4,'Kiểm tra phụ kiện','Phụ kiện không có trong danh mục: đặt trạng thái "Chờ giá" và báo ở QT1 bước 2 — không tự tạo phiếu QT2; người tính giá chọn chuyển sang QT2 trên Service. Không bao giờ coi là 0 đồng; các dòng khác vẫn tính.')
    +node(5,'Tính chi phí','CP NVL = Σ(định mức × đơn giá). CP SX = CP NVL × % SX. CP QL = (CP NVL + CP SX) × % QL. CP dịch vụ = (bốc xếp lên + bốc xếp xuống + vận chuyển) × số chuyến, tính một lần cho cả đơn — không phân bổ vào từng dòng sản phẩm.')
    +dsec('Phí dịch vụ của đơn',svcTable(R),false)
    +node(6,'Giá vốn & giá đề xuất','G (từng dòng) = Giá thành SX + CP QL. P = ROUND(G/(1−m)/(1−c)/(1−a), 0), a = n/365 × r. LN theo giá xin duyệt = 1 − G/[P_xin × (1−c) × (1−a)]; toàn đơn tính theo tổng tiền (gồm phí dịch vụ trọn đơn), không lấy trung bình tỷ lệ. Xác định người duyệt cấp 2.')
-   +dsec('Kết quả giá',priceTable(R,true),true)
+   +dsec('Kết quả giá',priceTable(R,false),true)
    +co('danger','Cần chốt với doanh nghiệp','Sheet TINH GIA dùng mẫu số (1 − a); sheet tổng hợp mô tả chi phí trả chậm dạng cộng thêm (số ngày × đơn giá × lãi suất/365). Các ô G23:G25 (thuế TNDN, LN sau thuế) có lỗi logic nên không dùng. CP MOQ chưa đưa vào giá.')
-   +node(7,'Ghi kết quả','Ghi BOM và giá về QT1 bước 2 cho người tính giá. Không ghi gì về phía Sale cho tới khi cấp 2 duyệt. Khi chốt: lưu bản chụp định mức, đơn giá, tham số đã dùng vào phiếu dự toán.')
+   +node(7,'Ghi kết quả','Ghi BOM và giá về QT1 bước 2 cho người tính giá. Sale chỉ nhận giá đề xuất khi người tính giá chốt (bước 3) và giá được duyệt (bước 6). Khi chốt: lưu bản chụp định mức, đơn giá, tham số đã dùng vào phiếu dự toán.')
    +'</div></div>';
 }
 
@@ -802,35 +833,35 @@ function rNN(){
    TỔNG QUAN
    ===================================================================== */
 function chainSVG(){
-  const W=160,H=58,Y=70,X=[10,200,390,580,770],C='#1D4E89';
+  const W=140,H=58,Y=74,X=[10,168,326,484,642,800],C='#1D4E89';
   const box=(x,y,num,a,b,c,dash)=>'<g><rect x="'+x+'" y="'+y+'" width="'+W+'" height="'+H+'" rx="8" fill="#fff" stroke="'+c+'" stroke-width="1.5"'+(dash?' stroke-dasharray="5 3"':'')+'/><text x="'+(x+10)+'" y="'+(y+18)+'" font-size="11" font-weight="700" fill="'+c+'">'+num+'</text><text x="'+(x+10)+'" y="'+(y+35)+'" font-size="11.5" font-weight="600" fill="#1f2937">'+a+'</text><text x="'+(x+10)+'" y="'+(y+50)+'" font-size="10" fill="#6b7280">'+b+'</text></g>';
-  const L=[['1','Sale gửi yêu cầu','Sale'],['2','Tính BOM & tính giá','Người tính giá rà soát, chốt'],['3','Duyệt cấp 1','Sales admin'],['4','Duyệt cấp 2','SA hoặc Trưởng phòng'],['5','Sale nhận giá','→ lập báo giá']];
-  let g='';L.forEach((s,i)=>{g+=box(X[i],Y,s[0],s[1],s[2],C);if(i<4)g+='<line x1="'+(X[i]+W)+'" y1="'+(Y+29)+'" x2="'+(X[i+1]-2)+'" y2="'+(Y+29)+'" stroke="'+C+'" stroke-width="1.5" marker-end="url(#ab)"/>';});
+  const L=[['1','Sale gửi yêu cầu','Sale'],['2','Tính BOM & giá','Người tính giá chốt'],['3','Sale xin duyệt','Xem giá đề xuất'],['4','Duyệt cấp 1','Sales admin'],['5','Duyệt cấp 2','SA hoặc Trưởng phòng'],['6','Sale nhận giá','→ lập báo giá']];
+  let g='';L.forEach((s,i)=>{g+=box(X[i],Y,s[0],s[1],s[2],C,false);if(i<5)g+='<line x1="'+(X[i]+W)+'" y1="'+(Y+29)+'" x2="'+(X[i+1]-2)+'" y2="'+(Y+29)+'" stroke="'+C+'" stroke-width="1.5" marker-end="url(#ab)"/>';});
   const back=(x1,x2,top,label,lx)=>'<path d="M'+x1+' '+Y+' C'+x1+' '+top+', '+x2+' '+top+', '+x2+' '+(Y-2)+'" fill="none" stroke="#B5560F" stroke-width="1.3" stroke-dasharray="4 3" marker-end="url(#ao)"/><text x="'+lx+'" y="'+(top+6)+'" font-size="10" fill="#B5560F">'+label+'</text>';
-  g+=back(250,90,36,'Thiếu thông tin → trả Sale',110)+back(450,320,42,'Trả về',365)+back(660,300,12,'Trả về',470);
-  g+='<text x="10" y="196" font-size="10.5" font-weight="600" fill="#6b7280">Chạy ngầm</text>';
-  g+=box(10,206,'BT','Base Table','Đơn giá, BOM chuẩn, phí','#475569',true)+box(200,206,'n8n','Tính BOM & giá','Chạy khi Sale gửi','#7C3AED',true)+box(420,206,'QT2','Tìm nguồn phụ kiện','Khi có phụ kiện mới','#6B3FA0',false);
-  g+='<line x1="170" y1="235" x2="198" y2="235" stroke="#475569" stroke-width="1.3" stroke-dasharray="4 3" marker-end="url(#ag)"/>';
-  g+='<line x1="100" y1="'+(Y+H)+'" x2="215" y2="204" stroke="#7C3AED" stroke-width="1.3" stroke-dasharray="4 3" marker-end="url(#av)"/>';
-  g+='<line x1="290" y1="206" x2="290" y2="'+(Y+H+2)+'" stroke="#7C3AED" stroke-width="1.3" stroke-dasharray="4 3" marker-end="url(#av)"/>';
-  g+='<line x1="335" y1="'+(Y+H)+'" x2="450" y2="204" stroke="#6B3FA0" stroke-width="1.3" marker-end="url(#ap)"/><line x1="480" y1="206" x2="352" y2="'+(Y+H+2)+'" stroke="#6B3FA0" stroke-width="1.3" marker-end="url(#ap)"/>';
-  g+='<text x="490" y="176" font-size="10" fill="#6B3FA0">có giá → vào danh mục, tính lại</text>';
+  g+=back(220,80,40,'Thiếu thông tin → trả Sale',90)+back(554,396,44,'Điều chỉnh giá xin',432)+back(712,238,12,'Trả Sale (bước 3) hoặc người tính giá (bước 2)',330);
+  g+='<text x="10" y="200" font-size="10.5" font-weight="600" fill="#6b7280">Chạy ngầm</text>';
+  g+=box(10,210,'BT','Base Table','Đơn giá, BOM, phí','#475569',true)+box(168,210,'n8n','Tính BOM & giá','Chạy khi Sale gửi','#7C3AED',true)+box(400,210,'QT2','Tìm nguồn NCC','Người tính giá chuyển','#6B3FA0',false);
+  g+='<line x1="150" y1="239" x2="166" y2="239" stroke="#475569" stroke-width="1.3" stroke-dasharray="4 3" marker-end="url(#ag)"/>';
+  g+='<line x1="80" y1="'+(Y+H)+'" x2="190" y2="208" stroke="#7C3AED" stroke-width="1.3" stroke-dasharray="4 3" marker-end="url(#av)"/>';
+  g+='<line x1="238" y1="210" x2="238" y2="'+(Y+H+2)+'" stroke="#7C3AED" stroke-width="1.3" stroke-dasharray="4 3" marker-end="url(#av)"/>';
+  g+='<line x1="285" y1="'+(Y+H)+'" x2="430" y2="208" stroke="#6B3FA0" stroke-width="1.3" marker-end="url(#ap)"/><line x1="460" y1="210" x2="300" y2="'+(Y+H+2)+'" stroke="#6B3FA0" stroke-width="1.3" marker-end="url(#ap)"/>';
+  g+='<text x="470" y="176" font-size="10" fill="#6B3FA0">chưa có NCC → chuyển QT2; có giá → vào danh mục, tính lại</text>';
   const mk=(id,c)=>'<marker id="'+id+'" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M2 1L8 5L2 9" fill="none" stroke="'+c+'" stroke-width="1.6" stroke-linecap="round"/></marker>';
-  return '<div class="tw" style="margin:4px 0 14px"><svg viewBox="0 0 940 280" style="min-width:760px;width:100%;font-family:\'Be Vietnam Pro\',system-ui,sans-serif" role="img" aria-label="Sơ đồ luồng quy trình"><defs>'+mk('ab',C)+mk('ao','#B5560F')+mk('ag','#475569')+mk('av','#7C3AED')+mk('ap','#6B3FA0')+'</defs>'+g+'</svg></div>';
+  return '<div class="tw" style="margin:4px 0 14px"><svg viewBox="0 0 950 284" style="min-width:760px;width:100%;font-family:\'Be Vietnam Pro\',system-ui,sans-serif" role="img" aria-label="Sơ đồ luồng quy trình"><defs>'+mk('ab',C)+mk('ao','#B5560F')+mk('ag','#475569')+mk('av','#7C3AED')+mk('ap','#6B3FA0')+'</defs>'+g+'</svg></div>';
 }
 function rOV(){
   const card=(v,st,c,t,d)=>'<button class="flowcard" style="border-color:'+c+';border-left-color:'+c+'" onclick="go(\''+v+'\')"><div class="ft" style="color:'+c+'">'+t+'</div><div class="fd">'+d+'</div><div class="fs">'+st.map((s,i)=>'<span class="'+(S.done[v+'_'+i]?'d':'')+'">'+s.c+'. '+esc(s.t)+'</span>').join('')+'</div></button>';
   const Y='<span class="y">✓</span>',P=t=>'<span class="p">'+t+'</span>',N='<span class="no">—</span>';
-  const vis=[['Thông tin yêu cầu',Y,Y,Y,Y,P('Phụ kiện mới')],['BOM & nhu cầu vật tư',N,Y,P('Tóm tắt'),P('Tóm tắt'),N],['Chi phí, giá vốn',N,Y,Y,Y,N],['Giá đề xuất',N,Y,Y,Y,N],['Lợi nhuận theo giá xin',N,Y,Y,Y,N],['Đơn giá được duyệt',Y,Y,Y,Y,N]]
+  const vis=[['Thông tin yêu cầu',Y,Y,Y,Y,P('Phụ kiện mới')],['BOM & nhu cầu vật tư',N,Y,P('Tóm tắt'),P('Tóm tắt'),N],['Chi phí, giá vốn',N,Y,Y,Y,N],['Giá đề xuất',Y,Y,Y,Y,N],['Lợi nhuận theo giá xin',N,Y,Y,Y,N],['Đơn giá được duyệt',Y,Y,Y,Y,N]]
     .map(r=>'<tr>'+r.map(c=>'<td>'+c+'</td>').join('')+'</tr>');
   return '<div class="card"><div class="body">'
    +sec('Luồng xử lý',chainSVG())
    +co('info','Ba nguyên tắc bất biến','1. Mỗi sản phẩm trong yêu cầu có BOM và đơn giá riêng, không gộp chung.<br>2. Giá mua thay đổi thì cập nhật bảng giá; quy cách/định mức thay đổi thì cập nhật BOM.<br>3. Cập nhật giá NVL không tự sửa dự toán đã chốt/duyệt; lần báo giá sau luôn tạo yêu cầu mới và duyệt lại.')
    +'<div class="sec"><div class="sec-t">Quy trình người dùng</div>'
-   +card('q1',Q1,'#1D4E89','QT1 — Yêu cầu tính giá & duyệt dự toán','Một phiếu xuyên suốt: Sale gửi → n8n tính BOM & giá, người tính giá rà soát, chốt → duyệt 2 cấp → Sale nhận đơn giá.')
-   +card('q2',Q2,'#6B3FA0','QT2 — Tìm nguồn phụ kiện mới','Nhánh tự mở từ QT1 bước 2 khi có phụ kiện chưa có trong danh mục; xong thì dự toán QT1 được tính lại.')+'</div>'
+   +card('q1',Q1,'#1D4E89','QT1 — Yêu cầu tính giá & duyệt dự toán','Một phiếu xuyên suốt: Sale gửi → n8n tính BOM & giá, người tính giá chốt → Sale xem giá đề xuất, nhập giá xin duyệt → duyệt 2 cấp → Sale nhận đơn giá.')
+   +card('q2',Q2,'#6B3FA0','QT2 — Tìm nguồn phụ kiện mới','Người tính giá chuyển sang từ QT1 bước 2 khi phụ kiện chưa có nhà cung cấp; xong thì dự toán QT1 được tính lại.')+'</div>'
    +sec('Ai thấy thông tin gì',tbl(['Thông tin','Sale','Người tính giá','Sales admin','Trưởng phòng','Bộ phận tìm nguồn'],vis)+'<div class="fhint">Đề xuất triển khai theo buổi trao đổi ("Sale không được phân quyền dữ liệu này, chỉ cần biết giá cuối cùng") — phân quyền chi tiết cần doanh nghiệp chốt.</div>','đề xuất')
-   +co('warn','Điểm chưa chốt — demo đang dùng phương án minh họa','BOM lõi: công thức cho 1,827/0,256 kg, sheet TINH GIA nhập 1,95/0,2835 kg (xem được cả hai ở QT1 bước 2, chọn "Nhập tay") · hệ số lõi tổng 110% · công thức thanh V chưa nhất quán đơn vị · OD515 hay OD506,5 · quy tắc 2 lõi trong thùng · phụ kiện cố định đổi mã theo size · phí dịch vụ trọn đơn thu đúng chi phí hay cộng LN, hoa hồng, trả chậm · MOQ chưa đưa vào giá · công thức trả chậm giữa 2 sheet · 2 cấp cùng Sales admin là 2 lượt hay 1 · đơn nhiều dòng khi chỉ một dòng xin thấp hơn đề xuất · ai cập nhật đơn giá NVL và tần suất.')
+   +co('warn','Điểm chưa chốt — demo đang dùng phương án minh họa','BOM lõi: công thức cho 1,827/0,256 kg, sheet TINH GIA nhập 1,95/0,2835 kg (xem được cả hai ở QT1 bước 2, chọn "Nhập tay") · hệ số lõi tổng 110% · công thức thanh V chưa nhất quán đơn vị · OD515 hay OD506,5 · quy tắc 2 lõi trong thùng · phụ kiện cố định đổi mã theo size · phí dịch vụ trọn đơn thu đúng chi phí hay cộng LN, hoa hồng, trả chậm · MOQ chưa đưa vào giá · công thức trả chậm giữa 2 sheet · Sale nhập giá xin duyệt sau khi xem giá đề xuất (buổi trao đổi) hay ngay trong yêu cầu (sheet tổng hợp) · 2 cấp cùng Sales admin là 2 lượt hay 1 · đơn nhiều dòng khi chỉ một dòng xin thấp hơn đề xuất · ai cập nhật đơn giá NVL và tần suất.')
    +'<div style="display:flex;justify-content:flex-end;gap:8px;margin-top:14px"><button class="btn" onclick="window.print()">In trang</button><button class="btn" onclick="resetAll()">Xoá dữ liệu nhập thử</button></div>'
    +'</div></div>';
 }
